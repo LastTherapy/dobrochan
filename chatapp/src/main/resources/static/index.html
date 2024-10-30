@@ -1,27 +1,36 @@
-<!-- src/main/resources/static/index.html -->
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dobrochan chat</title>
+    <title>Dobrochan</title>
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"/>
     <style>
-        #conversation { height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; }
-        .message { margin-bottom: 10px; }
+        #conversation {
+            height: 60vh; /* Уменьшили высоту, чтобы создать место для полей ввода выше */
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        .message {
+            margin-bottom: 10px;
+        }
+        .input-container {
+            position: fixed; /* Фиксируем контейнер полей ввода */
+            bottom: 30px; /* Устанавливаем отступ от нижней части экрана */
+            left: 0;
+            width: 100%;
+            padding: 0 15px; /* Отступы по бокам */
+        }
     </style>
 </head>
 <body>
-<div class="container">
-    <h2 class="mt-5">Dobrochan chat</h2>
-    <div id="conversation"></div>
-    <div class="input-group mt-3">
-        <input type="text" id="name" class="form-control" placeholder="Ваше имя"/>
-    </div>
-    <div class="input-group mt-2">
-        <input type="text" id="message" class="form-control" placeholder="Введите сообщение"/>
-        <div class="input-group-append">
-            <button class="btn btn-primary" onclick="sendMessage()">Отправить</button>
-        </div>
+<div class="container-fluid vh-100 d-flex flex-column justify-content-center">
+    <h2 class="text-center">Добро пожаловать. Снова.</h2>
+    <div id="conversation" class="flex-grow-1 mb-5"></div> <!-- mb-5 для отступа над полями ввода -->
+    <div class="d-flex input-container">
+        <input type="text" id="name" class="form-control w-25" placeholder="Ваше имя" value="Anonymous"/>
+        <input type="text" id="message" class="form-control mx-2" placeholder="Введите сообщение"/>
+        <button class="btn btn-primary" onclick="sendMessage()">Отправить</button>
     </div>
 </div>
 
@@ -37,15 +46,16 @@
         stompClient.connect({}, function (frame) {
             console.log('Connected: ' + frame);
             stompClient.subscribe('/topic/public', function (message) {
-                showMessage(JSON.parse(message.body));
+                var chatMessage = JSON.parse(message.body);
+                showMessage(chatMessage);
             });
         });
     }
 
     function sendMessage() {
-        var from = document.getElementById('name').value.trim();
+        var from = document.getElementById('name').value.trim() || "Anonymous";
         var content = document.getElementById('message').value.trim();
-        if(from && content) {
+        if(content) {
             var chatMessage = {
                 from: from,
                 content: content,
@@ -65,7 +75,23 @@
         conversation.scrollTop = conversation.scrollHeight;
     }
 
-    window.onload = connect;
+
+    // Функция загрузки сообщений с бэкенда
+    function loadMessages() {
+        fetch('/api/chat/messages')
+            .then(response => response.json())
+            .then(messages => {
+                messages.forEach(showMessage);
+            })
+            .catch(error => console.error('Ошибка загрузки сообщений:', error));
+    }
+
+
+    // Загружаем сообщения при загрузке страницы
+    window.onload = function() {
+        connect();
+        loadMessages();
+    };
 </script>
 </body>
 </html>
